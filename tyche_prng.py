@@ -67,13 +67,19 @@ class EntropyPools(object):
         # Each pool is 256 bits long and keep them all in a single bytearray.
         self.pools = bytearray(self.POOL_COUNT * self.POOL_BYTES)
 
-        # As new entropy arrives, we add it to each pool in sequence
-        self.next_pool = 0
+        # As new entropy arrives, we add it to each pool in sequence for each source
+        self.next_pool = {}
 
-    def add_entropy(self, new_entropy: bytearray):
+        # Number of times entropy has been requested via get_entropy()
+        self.request_count = 0
+
+    def add_entropy(self, entropy_source: int, new_entropy: bytearray):
         """Add new entropy. It will be added to the next pool in the sequence."""
+        # Each source gets its own index into the poos
+        current = self.next_pool.get(entropy_source, 0)
+
         # Determine where the current pool is in the bytearray and extract it
-        start = self.next_pool * self.POOL_BYTES
+        start = current * self.POOL_BYTES
         end = start + self.POOL_BYTES
         old_entropy = self.pools[start:end]
 
@@ -84,17 +90,18 @@ class EntropyPools(object):
         self.pools[start:end] = entropy
 
         # Advance to the next pool
-        self.next_pool = (self.next_pool + 1) & (self.POOL_COUNT - 1)
+        self.next_pool[entropy_source] = (current + 1) & (self.POOL_COUNT - 1)
 
-    def get_entropy(self, iteration) -> bytearray:
+    def get_entropy(self) -> bytearray:
         """
         Retrieve entropy from the pools. The iteration determines which subset of pools are used.
 
-        As with Fortuna, we use entroy from the first N pools based on the iteration count.
+        As with Fortuna, we use entropy from the first N pools based on the iteration count.
         """
         # The number of pools to use is determined by the least significant but of the current iteration.
         # Pool 0 is used for ever reseed, Pool 1 for ever other reseed, Pool 2 for every 4th reseed, etc..
-        bits = iteration | (2 << self.POOL_COUNT)
+        self.request_count += 1
+        bits = self.request_count | (2 << self.POOL_COUNT)
         number_of_pools = ((1 + (bits ^ (bits - 1))) >> 1) + 1
 
         # Retrieve the correct number of pools from the front of the pools array.
