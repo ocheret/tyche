@@ -14,9 +14,9 @@ def increment_counter(counter: bytearray) -> None:
         counter[i] = 0
 
 
-def sha256_hash(bytes: bytearray) -> bytearray:
+def sha256_hash(to_be_hashed: bytearray) -> bytearray:
     """Convenience wrapper for a SHA256 hash that returns a bytearray."""
-    return bytearray(hashlib.sha256(bytes).digest())
+    return bytearray(hashlib.sha256(to_be_hashed).digest())
 
 
 class SimpleAES(object):
@@ -28,6 +28,9 @@ class SimpleAES(object):
 
         # The nonce doesn't need to be secret but it should never be reused with the same key
         self.nonce = sha256_hash(bytearray(str(time.process_time_ns()), 'utf-8'))[:16]
+
+        # This will hold the AES encryptor
+        self.encryptor = None
 
     def update_key(self, new_key: bytearray):
         # Doesn't really matter what nonce is as long as it changes
@@ -99,9 +102,9 @@ class TychePRNG(object):
 
 if __name__ == "__main__":
     tprng = TychePRNG()
-    tprng.reseed(b"this is a test")
+    tprng.reseed(bytearray(b"this is a test"))
     for j in range(4):
-        for i in range(10):
+        for k in range(10):
             b = tprng.generate_random_blocks(4)
-            print(j, i, len(b), b)
+            print(j, k, len(b), b)
         tprng.reseed(bytearray(str(time.process_time_ns()), 'utf-8'))
