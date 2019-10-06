@@ -54,16 +54,22 @@ I have decided to implement a basic version of the Fortuna Pseudo
 Random Number Generator (PRNG) as devised by Bruce Schneir and Niels
 Ferguson as a replacement for the Yarrow PRNG.
 
+I've called my algorithm Tyche, the Greed goddess of fortune. Fortuna
+is the Roman goddess of Fortune.
+
 This algorithm requires a cryptographic hash as well as a good
-cryptographic cipher that uses non-linear mixing functions to
-achieve forward secrecy. We will use SHA256 for the hash and AES
-for the block cipher.
+cryptographic cipher that uses non-linear mixing functions to achieve
+forward secrecy. We will use SHA256 for the hash and AES for the block
+cipher.
 
 The Python standard library provides SHA256 and we will use the
-cryptography package from https://pypi.org/project/cryptography/
-for our AES implementation.
+cryptography package from https://pypi.org/project/cryptography/ for
+our AES implementation.
 
-### If Wishes Were Fishes...
+I've implemented everything in a single Python file, tyche_prng.py,
+for simplicity.
+
+### Wishful Thinking
 
 Of course, if we didn't have to generate our own entropy, we could
 simply use the secrets package. As per the documentation...
@@ -105,5 +111,18 @@ It is easy to add others. The code makes it clear where to add more
 sources of entropy. I didn't have time to implement more.
 
 I'll add more detail here later but I'm out of time for now.
+
+## Running the code
+
+You need Python 3 and the cryptography package which can be installed
+in your environment with...
+
+```bash
+pip install cryptography
+```
+
+Then you should be able to run the program like...
+
+python3 tyche_prng.py | od -x | more
 
 ~chuck
