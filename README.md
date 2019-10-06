@@ -118,11 +118,13 @@ You need Python 3 and the cryptography package which can be installed
 in your environment with...
 
 ```bash
-pip install cryptography
+$ pip install cryptography
 ```
 
 Then you should be able to run the program like...
 
-python3 tyche_prng.py | od -x | more
+```bash
+$ python3 tyche_prng.py | od -x | more
+```
 
 ~chuck
