@@ -1,6 +1,10 @@
+# Use the cryptography package for AES
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+
+# Use the standard library's hashlib for SHA256
 import hashlib
+
 import os
 from queue import Empty, Queue
 import resource
@@ -12,13 +16,14 @@ import time
 # Utility functions
 
 def debug(*args, **kwargs):
+    """Just a convenience to log to stderr for debugging."""
     print(*args, file=sys.stderr, **kwargs)
 
 
 def increment_counter(counter: bytearray) -> None:
     """Treats a bytearray as an integer (lsb first) and increments it by 1."""
     # If the counter comes back around to 0 again then we've survived the heat
-    # death of the Universe
+    # death of the Universe.
     for i in range(len(counter)):
         if counter[i] != 255:
             counter[i] += 1
@@ -75,13 +80,13 @@ class EntropyPools:
     entropy source. When entropy is used to reseed a PRNG, a different number
     of pools is used to make attacks more difficult.
     """
-    POOL_COUNT = 32
+    POOL_COUNT = 32     # Must be a power of 2
     POOL_BITS = 256
     POOL_BYTES = POOL_BITS // 8
 
     def __init__(self):
-        # As in Fortunat, we maintain 32 pools of entropy.
-        # Each pool is 256 bits long and keep them all in a single bytearray.
+        # As in Fortuna we maintain 32 pools of entropy.
+        # All pools are 256 bits long and kept in a single bytearray.
         self.pools = bytearray(self.POOL_COUNT * self.POOL_BYTES)
 
         # As entropy arrives, add it to each pool in sequence for each source.
@@ -119,7 +124,7 @@ class EntropyPools:
         # Pool 0 is used for ever reseed, Pool 1 for ever other reseed, Pool 2 for every 4th reseed, etc..
         self.request_count += 1
         bits = self.request_count | (2 << self.POOL_COUNT)
-        number_of_pools = ((1 + (bits ^ (bits - 1))) >> 1) + 1
+        number_of_pools = (1 + (bits ^ (bits - 1))) >> 1
 
         # Retrieve the correct number of pools from the front of the pools array.
         end = number_of_pools * self.POOL_BYTES
@@ -180,7 +185,6 @@ class EntropyFromExecutionJitter(EntropyGenerator):
         length = resource.getpagesize() * 5
         array = list(range(length))
         while True:
-            debug("In jitter loop")
             start = time.perf_counter_ns()
             # meaningless operation to take time
             array = [x + 2 if x & 1 == 0 else x + 1 for x in array]
@@ -194,9 +198,10 @@ class EntropyFromUsage(EntropyGenerator):
 
     def collect_entropy(self):
         while True:
-            debug("In usage loop")
-            stats = bytearray(str(resource.getrusage(resource.RUSAGE_SELF)),
-                              'utf-8')
+            x = resource.getrusage(resource.RUSAGE_SELF)
+            s = str([x.ru_utime, x.ru_stime, x.ru_maxrss,
+                     x.ru_minflt, x.ru_nvcsw, x.ru_nivcsw])
+            stats = bytearray(s, 'utf-8')
             self.send_entropy(stats)
 
 
@@ -210,6 +215,10 @@ class TychePRNG:
 
     Fortuna is the Roman goddess of fortune. Tyche is the Greek goddess of fortune.
     """
+
+    # Number of block requests before reseeding from entropy pool.
+    # Must be a power of 2.
+    RESEED_INTERVAL = 2 << 10
 
     def __init__(self):
         # 256-bit block cipher key (starts zeroed out)
@@ -230,12 +239,15 @@ class TychePRNG:
         # Entropy generators
         self.generators = []
 
+        # Number of blocks produced
+        self.reseed_counter = 0
+
     def start(self):
         """Start up separate threads for each entropy source"""
-        debug("Starting jitter")
         self.generators.append(EntropyFromExecutionJitter())
-        debug("Starting usage")
         self.generators.append(EntropyFromUsage())
+        # Add more entropy sources here
+
         for t in self.generators:
             t.daemon = True
             t.start()
@@ -249,8 +261,13 @@ class TychePRNG:
                 count += 1
         return count
 
-    def reseed(self):
+    def reseed(self, count):
         """Seed with additional entropy"""
+
+        # Get some entropy from the sources
+        i = 0
+        while i < count:
+            i += self.poll_entropy_sources()
 
         # Mix the old key with some new entropy
         self.key = sha256_hash(self.key + self.entropy_pools.get_entropy())
@@ -261,14 +278,7 @@ class TychePRNG:
     def _generate_blocks(self, num_blocks: int) -> bytearray:
         """Generates random blocks using the same key. Internal!"""
         if not self.seeded:
-            # Get an arbitrary amount of entropy until we're happy
-            count = 0
-            debug("Getting initial entropy")
-            while count < 1000:
-                count += self.poll_entropy_sources()
-                debug("count = ", count)
-            debug("Done getting initial entropy")
-            self.reseed()
+            self.reseed(1000)
 
         # We won't check num_blocks since we will call it with a reasonable value
         blocks = bytearray()
@@ -286,6 +296,12 @@ class TychePRNG:
         self.key = self._generate_blocks(2)
         self.aes.update_key(self.key)
 
+        # AES is good but it will result in no collisions for too long.
+        # So after a number of requests, add some more entropy.
+        self.reseed_counter += 1
+        if self.reseed_counter & (self.RESEED_INTERVAL - 1) == 0:
+            self.reseed(1)
+
         return blocks
 
 
@@ -298,5 +314,4 @@ if __name__ == "__main__":
             os.write(1, random_bytes)
     except KeyboardInterrupt:
         # Don't dump a stack trace when the user hits CTRL-C
-        debug("exiting from main")
         sys.exit(1)
