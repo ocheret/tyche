@@ -116,12 +116,15 @@ class EntropyPools:
 
     def get_entropy(self) -> bytearray:
         """
-        Retrieve entropy from the pools. The iteration determines which subset of pools are used.
+        Retrieve entropy from the pools. The iteration determines which subset
+        of pools are used.
 
-        As with Fortuna, we use entropy from the first N pools based on the iteration count.
+        As with Fortuna, we use entropy from the first N pools based on the
+        iteration count.
         """
-        # The number of pools to use is determined by the least significant but of the current iteration.
-        # Pool 0 is used for ever reseed, Pool 1 for ever other reseed, Pool 2 for every 4th reseed, etc..
+        # The number of pools to use is determined by the least significant bit
+        # of the current iteration. Pool 0 is used for ever reseed, Pool 1 for
+        # every other reseed, Pool 2 for every 4th reseed, etc..
         self.request_count += 1
         bits = self.request_count | (2 << self.POOL_COUNT)
         number_of_pools = (1 + (bits ^ (bits - 1))) >> 1
@@ -143,6 +146,8 @@ class EntropyGenerator(Thread):
     def __init__(self, name: str):
         Thread.__init__(self)
         self.name = name
+        # Limit how much can be written to the queue. This throttles the
+        # entropy generation threads. They block until needed.
         self.queue = Queue(1)
 
     def send_entropy(self, entropy: bytearray):
@@ -161,15 +166,12 @@ class EntropyGenerator(Thread):
 
     def run(self):
         """Excecute entropy generation and catch exceptions."""
-        try:
-            self.collect_entropy()
-        except KeyboardInterrupt:
-            # Don't dump a stack trace when the user hits CTRL-C
-            pass
-        return
+        self.collect_entropy()
 
 
 class EntropyFromExecutionJitter(EntropyGenerator):
+    """Generate entropy based on execution time jitter."""
+
     def __init__(self):
         EntropyGenerator.__init__(self, "jitter")
 
@@ -193,6 +195,8 @@ class EntropyFromExecutionJitter(EntropyGenerator):
 
 
 class EntropyFromUsage(EntropyGenerator):
+    """Generate entropy based on process usage stats."""
+
     def __init__(self):
         EntropyGenerator.__init__(self, "usage")
 
@@ -204,6 +208,8 @@ class EntropyFromUsage(EntropyGenerator):
             stats = bytearray(s, 'utf-8')
             self.send_entropy(stats)
 
+
+# TODO - Add more EntropyGenerator subclasses here.
 
 class TychePRNG:
     """
@@ -246,13 +252,14 @@ class TychePRNG:
         """Start up separate threads for each entropy source"""
         self.generators.append(EntropyFromExecutionJitter())
         self.generators.append(EntropyFromUsage())
-        # Add more entropy sources here
+        # TODO - Add more entropy sources here
 
         for t in self.generators:
             t.daemon = True
             t.start()
 
     def poll_entropy_sources(self) -> int:
+        """Get entropy from our sources and add it to the entropy pools."""
         count = 0
         for g in self.generators:
             entropy = g.get_entropy(True)
