@@ -9,7 +9,7 @@ def cat_dev_random():
     """Write random bytes to stdout using the secrets package."""
     while True:
         random_byte_string = secrets.token_bytes(CHUNK_SIZE)
-        sys.stdout.buffer.write(random_byte_string)
+        os.write(sys.stdout.fileno(), random_byte_string)
 
 if __name__ == "__main__":
     try:

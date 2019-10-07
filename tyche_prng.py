@@ -318,7 +318,7 @@ if __name__ == "__main__":
         tprng.start()
         while True:
             random_bytes = tprng.generate_random_blocks(64)
-            sys.stdout.buffer.write(random_bytes)
+            os.write(sys.stdout.fileno(), random_bytes)
     except KeyboardInterrupt:
         # Don't dump a stack trace when the user hits CTRL-C
         sys.exit(1)

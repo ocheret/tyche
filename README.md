@@ -89,7 +89,7 @@ secrets_random.py for a complete program):
 ```python
 while True:
     random_byte_string = secrets.token_bytes(64)
-    os.write(1, random_byte_string)
+    os.write(sys.stdout.fileno(), random_byte_string)
 ```
 
 ### Entropy Sources
