@@ -97,7 +97,7 @@ class EntropyPools:
 
     def add_entropy(self, entropy_source: str, new_entropy: bytearray):
         """Add new entropy to the next pool in the sequence for this source."""
-        # Each source gets its own index into the poos
+        # Each source gets its own index into the pools
         current = self.next_pool.get(entropy_source, 0)
 
         # Determine where the current pool is in the bytearray and extract it
@@ -165,7 +165,7 @@ class EntropyGenerator(Thread):
         pass
 
     def run(self):
-        """Excecute entropy generation and catch exceptions."""
+        """Excecute entropy generation."""
         self.collect_entropy()
 
 
@@ -230,7 +230,7 @@ class TychePRNG:
         # 256-bit block cipher key (starts zeroed out)
         self.key = bytearray(32)
 
-        # 128-bit counter kept in an int
+        # 128-bit counter kept in a bytearray
         self.counter = bytearray(16)
 
         # Indicates if we're already seeded (cheaper than testing counter)
@@ -318,7 +318,7 @@ if __name__ == "__main__":
         tprng.start()
         while True:
             random_bytes = tprng.generate_random_blocks(64)
-            os.write(1, random_bytes)
+            sys.stdout.buffer.write(random_bytes)
     except KeyboardInterrupt:
         # Don't dump a stack trace when the user hits CTRL-C
         sys.exit(1)

@@ -54,7 +54,12 @@ I have decided to implement a basic version of the Fortuna Pseudo
 Random Number Generator (PRNG) as devised by Bruce Schneir and Niels
 Ferguson as a replacement for the Yarrow PRNG.
 
-I've called my algorithm Tyche, the Greed goddess of fortune. Fortuna
+The implementation gathers some entropy before outputting anything so
+there is a short delay before output appears. Also, no seed file is
+maintained. It would be easy enough to add such a capability but I
+believe it only serves to reduce security.
+
+I've called my algorithm Tyche, the Greek goddess of fortune. Fortuna
 is the Roman goddess of Fortune.
 
 This algorithm requires a cryptographic hash as well as a good
