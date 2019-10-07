@@ -54,7 +54,7 @@ class SimpleAES:
 
         # The nonce doesn't need to be secret but it should never be reused
         # with the same key
-        self.nonce = sha256_hash(bytearray(str(time.process_time_ns()),
+        self.nonce = sha256_hash(bytearray(str(time.perf_counter()),
                                            'utf-8'))[:16]
 
         # This will hold the AES encryptor
@@ -319,6 +319,6 @@ if __name__ == "__main__":
         while True:
             random_bytes = tprng.generate_random_blocks(64)
             os.write(sys.stdout.fileno(), random_bytes)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, BrokenPipeError):
         # Don't dump a stack trace when the user hits CTRL-C
         sys.exit(1)
