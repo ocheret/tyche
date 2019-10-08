@@ -129,16 +129,16 @@ class EntropyPools:
         bits = self.request_count | (2 << self.POOL_COUNT)
         number_of_pools = (1 + (bits ^ (bits - 1))) >> 1
 
-        # Retrieve the correct number of pools from the front of the pools array.
+        # Retrieve the correct number of pools from front of the pools array.
         end = number_of_pools * self.POOL_BYTES
         return self.pools[:end]
 
 
-# Entropy generator functions. Each entropy generator will run in its own thread
-# for simplicity. Each generator gets its own small queue to provide information
-# back to the entropy accumulator. The function should loop forever and can try
-# to generate entropy as frequently as it wants to. Queue writes will block
-# until the generator's policy decides to receive more entropy.
+# Entropy generator functions. Each entropy generator will run in its own
+# thread for simplicity. Each generator gets its own small queue to provide
+# information back to the entropy accumulator. The function should loop forever
+# and can try to generate entropy as frequently as it wants to. Queue writes
+# will block until the generator's policy decides to receive more entropy.
 
 class EntropyGenerator(Thread):
     """'Abstract' superclass for entropy generators"""
@@ -177,12 +177,12 @@ class EntropyFromExecutionJitter(EntropyGenerator):
 
     def collect_entropy(self):
         """
-        Execute some code that is likely to take different amounts of time to run
-        on different passes.
+        Execute some code that is likely to take different amounts of time to
+        run on different passes.
 
-        Create a list large enough to span multiple pages of memory and transform
-        it along with some conditional operations to potentially take advantage
-        of speculative execution in the CPU.
+        Create a list large enough to span multiple pages of memory and
+        transform it along with some conditional operations to potentially take
+        advantage of speculative execution in the CPU.
         """
         length = resource.getpagesize() * 5
         array = list(range(length))
@@ -215,11 +215,12 @@ class TychePRNG:
     """
     A implementation of a Fortuna-like PRNG simplified for this use case.
 
-    A more general implementation has to be able to deliver odd numbers of bytes, check on limits for
-    request lengths, etc...  This is not needed here since we will always use this to get a fixed number
-    of random blocks.
+    A more general implementation has to be able to deliver odd numbers of
+    bytes, check on limits for request lengths, etc...  This is not needed here
+    since we will always use this to get a fixed number of random blocks.
 
-    Fortuna is the Roman goddess of fortune. Tyche is the Greek goddess of fortune.
+    Fortuna is the Roman goddess of fortune.
+    Tyche is the Greek goddess of fortune.
     """
 
     # Number of block requests before reseeding from entropy pool.
@@ -287,7 +288,7 @@ class TychePRNG:
         if not self.seeded:
             self.reseed(1000)
 
-        # We won't check num_blocks since we will call it with a reasonable value
+        # We won't check num_blocks since we'll call it with a reasonable value
         blocks = bytearray()
         for i in range(num_blocks):
             blocks += self.aes.encrypt_block(self.counter)
@@ -296,7 +297,7 @@ class TychePRNG:
         return blocks
 
     def generate_random_blocks(self, num_blocks: int) -> bytearray:
-        """Generates random blocks and replaces the key for forward secrecy."""
+        """Generates random blocks and replaces key for forward secrecy."""
         blocks = self._generate_blocks(num_blocks)
 
         # Change the key to prevent compromising of these blocks
