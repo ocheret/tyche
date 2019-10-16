@@ -208,6 +208,9 @@ class EntropyFromUsage(EntropyGenerator):
             stats = bytearray(s, 'utf-8')
             self.send_entropy(stats)
 
+# TODO - Add more entropy sources here
+generator_classes = [EntropyFromExecutionJitter,
+                     EntropyFromUsage]
 
 # TODO - Add more EntropyGenerator subclasses here.
 
@@ -251,9 +254,8 @@ class TychePRNG:
 
     def start(self):
         """Start up separate threads for each entropy source"""
-        self.generators.append(EntropyFromExecutionJitter())
-        self.generators.append(EntropyFromUsage())
-        # TODO - Add more entropy sources here
+        for gen_class in generator_classes:
+            self.generators.append(gen_class())
 
         for t in self.generators:
             t.daemon = True
