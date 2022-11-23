@@ -123,7 +123,7 @@ You need Python 3 and the cryptography package which can be installed
 in your environment with...
 
 ```bash
-$ pip install cryptography
+$ pip3 install cryptography
 ```
 
 Then you should be able to run the program like...
